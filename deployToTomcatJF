@@ -1,27 +1,28 @@
-node{
-    def mvnHome = tool name: 'mavenlatest', type: 'maven'
-    def mvn = "${mvnHome}/bin/mvn"
+node {
+     
+     def m = tool name: 'mavenlatest', type: 'maven'
+     def mv = "${m}/bin/mvn"
+     def tomcatUsr ='ec2-user'
+     
+     stage ('checkout'){
+         git credentialsId: 'gitid', url: 'https://github.com/desai246/myweb-1.git'
+     }
+     
+     stage ('build') {
+        
+         sh "${mv} clean package"
+         sh 'mv target/myweb*.war target/myweb.war'
+
+     }
+     
+     stage ('deploy to tomcat') {
+         sshagent(['tomcat-dev']) {
+            sh "ssh -o StrictHostKeyChecking=no ${tomcatUsr}@172.31.39.43 /opt/apache-tomcat-8.5.35/bin/shutdown.sh"
+			sh "ssh ${tomcatUsr}@172.31.39.43 rm -rf /opt/apache-tomcat-8.5.35/webapps/myweb*"
+		    sh "scp target/myweb.war ${tomcatUsr}@172.31.39.43:/opt/apache-tomcat-8.5.35/webapps/"
+		    sh "ssh ${tomcatUsr}@172.31.39.43 /opt/apache-tomcat-8.5.35/bin/startup.sh"
     
-    stage('Git Checkout'){
-	   git credentialsId: 'gitid', 
-	   url: 'https://github.com/desai246/myweb-1'
+      }
 
-    }
-	  stage('Maven Build'){
-	    
-		sh "${mvn} clean package"
-		sh 'mv target/myweb*.war target/myweb.war'
-		
-		sshagent(['tomcat9']) {
-		stage('Deploy to Dev'){
-	
-		   sshagent(['tomcat-dev']) {
-		    sh "ssh -o StrictHostKeyChecking=yes ${tomcatUsr}@13.232.39.155 /opt/tomcat9/bin/shutdown.sh"
-			sh "ssh ${tomcatUsr}@13.232.39.155 rm -rf /opt/tomcat9/webapps/myweb*"
-		    sh "scp target/myweb.war ${tomcatUsr}@13.232.39.155:/opt/tomcat9/webapps/"
-		    sh "ssh ${tomcatUsr}@13.232.39.155 /opt/tomcat9/bin/startup.sh"
-
-         }
-	   }
-
-}
+     }
+ }
