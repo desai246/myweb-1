@@ -1,0 +1,27 @@
+node{
+    def mvnHome = tool name: 'mavenlatest', type: 'maven'
+    def mvn = "${mvnHome}/bin/mvn"
+    
+    stage('Git Checkout'){
+	   git credentialsId: 'gitid', 
+	   url: 'https://github.com/desai246/myweb-1'
+
+    }
+	  stage('Maven Build'){
+	    
+		sh "${mvn} clean package"
+		sh 'mv target/myweb*.war target/myweb.war'
+		
+		sshagent(['tomcat9']) {
+		stage('Deploy to Dev'){
+	
+		   sshagent(['tomcat-dev']) {
+		    sh "ssh -o StrictHostKeyChecking=yes ${tomcatUsr}@13.232.39.155 /opt/tomcat9/bin/shutdown.sh"
+			sh "ssh ${tomcatUsr}@13.232.39.155 rm -rf /opt/tomcat9/webapps/myweb*"
+		    sh "scp target/myweb.war ${tomcatUsr}@13.232.39.155:/opt/tomcat9/webapps/"
+		    sh "ssh ${tomcatUsr}@13.232.39.155 /opt/tomcat9/bin/startup.sh"
+
+         }
+	   }
+
+}
